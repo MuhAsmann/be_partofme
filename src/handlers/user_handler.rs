@@ -1,6 +1,50 @@
-use actix_web::{delete, get, post, web, HttpResponse, Responder};
+use actix_web::{delete, get, post, web, HttpResponse, Responder, HttpRequest, Result, HttpMessage};
 use diesel::prelude::*;
-use crate::{models::user::*, schema::users::dsl::*, db::DbPool};
+use bcrypt::verify;
+use jsonwebtoken::{encode, Header, EncodingKey};
+use crate::{models::user::*, schema::users::dsl::*, db::DbPool, models::auth::Claims,config::get_jwt_secret};
+
+
+pub async fn get_current_user(req: HttpRequest) -> Result<HttpResponse> {
+    let user_id = req.extensions().get::<i32>().cloned();
+
+    match user_id {
+        Some(uid) => Ok(HttpResponse::Ok().body(format!("User ID from token: {}", uid))),
+        None => Ok(HttpResponse::Unauthorized().finish()),
+    }
+}
+
+
+pub async fn login_user(
+    pool: web::Data<DbPool>,
+    payload: web::Json<LoginRequest>,
+) -> Result<HttpResponse> {
+    use crate::schema::users::dsl::*;
+
+    let conn = &mut pool.get().unwrap();
+    let user = users
+        .filter(email.eq(&payload.email))
+        .first::<User>(conn)
+        .optional()
+        .map_err(|_| actix_web::error::ErrorInternalServerError("Database query error"))?;
+
+    if let Some(user) = user {
+        let is_valid = verify(&payload.password, &user.password_hash)
+            .map_err(|_| actix_web::error::ErrorInternalServerError("Password verification error"))?;
+        if is_valid {
+            let claims = Claims::new(user.id);
+            let token = encode(
+                &Header::default(),
+                &claims,
+                &EncodingKey::from_secret(get_jwt_secret().as_ref()),
+            ).map_err(|_| actix_web::error::ErrorInternalServerError("Token encoding error"))?;
+            return Ok(HttpResponse::Ok().json(LoginResponse { token }));
+        }
+    }
+
+    Ok(HttpResponse::Unauthorized().body("Invalid email or password"))
+}
+
 
 #[tracing::instrument(skip(pool))]
 #[get("/users")]
