@@ -167,7 +167,7 @@ Response contoh (user yang baru dibuat):
 
 ---
 
-### GET DETAIL `/users/{id}`
+### GET DETAIL `/user/{id}`
 
 Mengambil detail user berdasarkan ID.
 
@@ -187,7 +187,7 @@ Response contoh:
 ---
 
 
-### DELETE `/users/{id}`
+### DELETE `/user/{id}`
 
 Menghapus user berdasarkan ID.
 
