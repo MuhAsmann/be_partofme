@@ -2,15 +2,19 @@ use actix_web::{delete, get, post, web, HttpResponse, Responder};
 use diesel::prelude::*;
 use crate::{models::user::*, schema::users::dsl::*, db::DbPool};
 
+#[tracing::instrument(skip(pool))]
 #[get("/users")]
 pub async fn get_users(pool: web::Data<DbPool>) -> impl Responder {
     let pool = pool.clone(); // clone for thread safety
+
+    tracing::info!("Fetching all users");
 
     let result = web::block(move || {
         let mut conn = pool.get().expect("Failed to get DB connection");
         users.load::<User>(&mut conn)
     })
     .await;
+
 
     match result {
         Ok(Ok(user_list)) => HttpResponse::Ok().json(user_list),
@@ -19,6 +23,7 @@ pub async fn get_users(pool: web::Data<DbPool>) -> impl Responder {
     }
 }
 
+#[tracing::instrument(skip(pool))]
 #[get("/user/{id}")]
 pub async fn get_user_by_id(
     pool: web::Data<DbPool>,
@@ -41,6 +46,7 @@ pub async fn get_user_by_id(
     }
 }
 
+#[tracing::instrument(skip(pool, user))]
 #[post("/users")]
 pub async fn create_user(
     pool: web::Data<DbPool>,
