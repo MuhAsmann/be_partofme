@@ -1,6 +1,5 @@
 
 
-```markdown
 # Rust Actix Web API with Diesel and PostgreSQL
 
 API sederhana menggunakan **Actix Web** sebagai web framework, **Diesel** sebagai ORM, dan **PostgreSQL** sebagai database.
